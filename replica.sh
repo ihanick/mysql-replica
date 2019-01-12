@@ -56,10 +56,13 @@ if [ "$MYSQL_MASTER_SERVER" ]; then
         exit 1
     fi
 
+    echo "INSTALL PLUGIN rpl_semi_sync_slave SONAME 'semisync_slave.so';" | "${mysql[@]}"
     # Get master position and set it on the slave. NB: MASTER_PORT and MASTER_LOG_POS must not be quoted
     MasterPosition=$(mysql "-u$MYSQL_REPLICA_USER" "-p$MYSQL_REPLICA_PASS" "-h$MYSQL_MASTER_SERVER" -e "show master status \G" | awk '/Position/ {print $2}')
     MasterFile=$(mysql  "-u$MYSQL_REPLICA_USER" "-p$MYSQL_REPLICA_PASS" "-h$MYSQL_MASTER_SERVER"   -e "show master status \G"     | awk '/File/ {print $2}')
     echo "CHANGE MASTER TO MASTER_HOST='$MYSQL_MASTER_SERVER', MASTER_PORT=$MYSQL_MASTER_PORT, MASTER_USER='$MYSQL_REPLICA_USER', MASTER_PASSWORD='$MYSQL_REPLICA_PASS', MASTER_LOG_FILE='$MasterFile', MASTER_LOG_POS=$MasterPosition;"  | "${mysql[@]}"
 
     echo "START SLAVE;"  | "${mysql[@]}"
+else
+    echo "INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';" | "${mysql[@]}"
 fi
