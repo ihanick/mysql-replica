@@ -24,6 +24,8 @@ if [ "$MYSQL_REPLICA_USER" ]; then
         echo "GRANT REPLICATION CLIENT ON *.* TO '$MYSQL_REPLICA_USER'@'%'; " | "${mysql[@]}"
 fi
 
+ps-admin --enable-rocksdb --user=root --password="$MYSQL_ROOT_PASSWORD"
+
 #
 # On the slave: point to a master server
 #
@@ -59,7 +61,10 @@ if [ "$MYSQL_MASTER_SERVER" ]; then
     # Get master position and set it on the slave. NB: MASTER_PORT and MASTER_LOG_POS must not be quoted
     MasterPosition=$(mysql "-u$MYSQL_REPLICA_USER" "-p$MYSQL_REPLICA_PASS" "-h$MYSQL_MASTER_SERVER" -e "show master status \G" | awk '/Position/ {print $2}')
     MasterFile=$(mysql  "-u$MYSQL_REPLICA_USER" "-p$MYSQL_REPLICA_PASS" "-h$MYSQL_MASTER_SERVER"   -e "show master status \G"     | awk '/File/ {print $2}')
-    echo "CHANGE MASTER TO MASTER_HOST='$MYSQL_MASTER_SERVER', MASTER_PORT=$MYSQL_MASTER_PORT, MASTER_USER='$MYSQL_REPLICA_USER', MASTER_PASSWORD='$MYSQL_REPLICA_PASS', MASTER_LOG_FILE='$MasterFile', MASTER_LOG_POS=$MasterPosition;"  | "${mysql[@]}"
+    MasterGtid=$(mysql  "-u$MYSQL_REPLICA_USER" "-p$MYSQL_REPLICA_PASS" "-h$MYSQL_MASTER_SERVER"   -e "show master status \G"     | awk '/Executed_Gtid_Set/ {print $2}')
+    #echo "CHANGE MASTER TO MASTER_HOST='$MYSQL_MASTER_SERVER', MASTER_PORT=$MYSQL_MASTER_PORT, MASTER_USER='$MYSQL_REPLICA_USER', MASTER_PASSWORD='$MYSQL_REPLICA_PASS', MASTER_LOG_FILE='$MasterFile', MASTER_LOG_POS=$MasterPosition;"  | "${mysql[@]}"
+    echo "RESET MASTER; SET GLOBAL GTID_PURGED='$MasterGtid'"  | "${mysql[@]}"
+    echo "CHANGE MASTER TO MASTER_HOST='$MYSQL_MASTER_SERVER', MASTER_PORT=$MYSQL_MASTER_PORT, MASTER_USER='$MYSQL_REPLICA_USER', MASTER_PASSWORD='$MYSQL_REPLICA_PASS', MASTER_AUTO_POSITION=1;"  | "${mysql[@]}"
 
     echo "START SLAVE;"  | "${mysql[@]}"
 fi

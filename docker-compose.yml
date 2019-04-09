@@ -6,19 +6,19 @@ services:
         ports:
             - 3306:3306
         environment:
-            - MYSQL_ROOT_PASSWORD=master_passw0rd
+            - MYSQL_ROOT_PASSWORD=secret
             - MYSQL_REPLICA_USER=replica
-            - MYSQL_REPLICA_PASS=replica_Passw0rd
-        command: ["mysqld", "--log-bin=mysql-bin", "--server-id=1"]
+            - MYSQL_REPLICA_PASS=secret
+        command: ["mysqld", "--log-bin=mysql-bin", "--server-id=1", "--innodb_buffer_pool_size=1G", "--binlog-format=ROW",  "--enforce-gtid-consistency", "--gtid-mode=ON"]
     slave:
         build: .
         restart: unless-stopped
         ports:
             - 3307:3306
         environment:
-            - MYSQL_ROOT_PASSWORD=slave_passw0rd
+            - MYSQL_ROOT_PASSWORD=secret
             - MYSQL_REPLICA_USER=replica
-            - MYSQL_REPLICA_PASS=replica_Passw0rd
+            - MYSQL_REPLICA_PASS=secret
             - MYSQL_MASTER_SERVER=master
             - MYSQL_MASTER_WAIT_TIME=10
-        command: ["mysqld", "--log-bin=mysql-bin", "--server-id=2", "--relay_log_space_limit=2G", "--slave_parallel_type=DATABASE"]
+        command: ["mysqld", "--log-bin=mysql-bin", "--server-id=2", "--innodb_buffer_pool_size=1G", "--log-slave-updates", "--binlog-format=ROW", "--enforce-gtid-consistency", "--gtid-mode=ON"]
